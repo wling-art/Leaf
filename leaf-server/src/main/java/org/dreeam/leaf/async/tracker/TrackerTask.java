@@ -19,6 +19,9 @@ public record TrackerTask(ServerLevel world, EntitySlice entities) implements Ca
         final Entity[] raw = entities.array();
         for (int i = entities.start(); i < entities.end(); i++) {
             final Entity entity = raw[i];
+            if (entity.isRemoved()) {
+                continue;
+            }
             final ChunkMap.TrackedEntity tracker = ((EntityTrackerEntity) entity).moonrise$getTrackedEntity();
             // removed in world if null
             if (tracker == null) {

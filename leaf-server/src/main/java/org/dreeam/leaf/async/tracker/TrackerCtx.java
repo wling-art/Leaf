@@ -116,6 +116,9 @@ public final class TrackerCtx {
     void handle(boolean flush) {
         if (!pluginEntity.isEmpty()) {
             for (final Entity entity : pluginEntity) {
+                if (entity.isRemoved()) {
+                    continue;
+                }
                 final ChunkMap.TrackedEntity tracker = ((EntityTrackerEntity) entity).moonrise$getTrackedEntity();
                 if (tracker == null) {
                     continue;
