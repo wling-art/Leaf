@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Github Actions <no-reply@github.com>
+Date: Sat, 1 Jan 2000 00:00:00 +0000
+Subject: [PATCH] Paper Upstream
+
+Backported from > Paper 1.21.11
+
+Original license: GPLv3
+Original project: https://github.com/PaperMC/Paper
+
+diff --git a/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 372e0202cdef43d7c25645ba468bbaaddf09b144..f922ca23e6a155553efe946d8852900e20e55aa5 100644
+--- a/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -352,6 +352,7 @@ public class ServerGamePacketListenerImpl
+ 
+     @Override
+     public void tick() {
++        if (this.isDisconnected()) return; // Paper
+         if (this.ackBlockChangesUpTo > -1) {
+             this.send(new ClientboundBlockChangedAckPacket(this.ackBlockChangesUpTo));
+             this.ackBlockChangesUpTo = -1;
