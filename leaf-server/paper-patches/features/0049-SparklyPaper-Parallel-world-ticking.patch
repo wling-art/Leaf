@@ -1755,3 +1755,18 @@ index de1ffa1f2a8b8331f484a7a6546f4b29e2c853c6..138d8c1f78dea434cb7f1b8b1e39bdf3
          if (event.callEvent()) {
              boolean result = snapshot.place(flags);
              return !checkSetResult || result;
+diff --git a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
+index c3713b6653bcd595c0a40788cd4ffa12e3ce2e4b..cf9729332e3a5fb73e0c89bd1ae74a70c300f90f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
++++ b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
+@@ -457,6 +457,10 @@ public class CraftScheduler implements BukkitScheduler {
+             this.asyncScheduler.mainThreadHeartbeat();
+         }
+         // Paper end
++        this.executeReadyTasks(); // Leaf - SparklyPaper - parallel world ticking
++    }
++
++    public void executeReadyTasks() { // Leaf - SparklyPaper - parallel world ticking - drain ready sync tasks without advancing the tick
+         final List<CraftTask> temp = this.temp;
+         this.parsePending();
+         while (this.isReady(this.currentTick)) {

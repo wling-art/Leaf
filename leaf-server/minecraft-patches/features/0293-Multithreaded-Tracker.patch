@@ -152,10 +152,10 @@ index 22f37a0779996c9e3a9416a2a1ba2bee74e3f568..265011035d90804d9a0295f693878509
          return ObjectSets.unmodifiable(chunks);
      }
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index a4932da0ce4efe1a952adb9045eb3475e9b58e0a..cfd43f555d3f648ef08b20667135d8f5a658f400 100644
+index a262c02277e24627a4b804c19ac9a1fc7216f1c4..9e593877b5c70dae97e95b28f33da2e36f3eff20 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1981,6 +1981,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1994,6 +1994,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          // Leaf end - SparklyPaper - parallel world ticking
          this.isIteratingOverLevels = false; // Paper - Throw exception on world create while being ticked
  
@@ -164,7 +164,7 @@ index a4932da0ce4efe1a952adb9045eb3475e9b58e0a..cfd43f555d3f648ef08b20667135d8f5
          profilerFiller.popPush("connection");
          this.tickConnection();
          profilerFiller.popPush("players");
-@@ -2080,6 +2082,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -2093,6 +2095,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
          newLevels.remove(level.dimension());
          if (org.dreeam.leaf.config.modules.async.SparklyPaperParallelWorldTicking.enabled) level.tickExecutor.shutdown(); // Leaf - SparklyPaper - parallel world ticking (We remove it in here instead of ServerLevel.close() because ServerLevel.close() is never called!)
