@@ -1756,17 +1756,54 @@ index de1ffa1f2a8b8331f484a7a6546f4b29e2c853c6..138d8c1f78dea434cb7f1b8b1e39bdf3
              boolean result = snapshot.place(flags);
              return !checkSetResult || result;
 diff --git a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
-index c3713b6653bcd595c0a40788cd4ffa12e3ce2e4b..cf9729332e3a5fb73e0c89bd1ae74a70c300f90f 100644
+index c3713b6653bcd595c0a40788cd4ffa12e3ce2e4b..60de3aafb7dd628b712efba6c3aca9b0048baa84 100644
 --- a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
 +++ b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
-@@ -457,6 +457,10 @@ public class CraftScheduler implements BukkitScheduler {
-             this.asyncScheduler.mainThreadHeartbeat();
-         }
-         // Paper end
-+        this.executeReadyTasks(); // Leaf - SparklyPaper - parallel world ticking
+@@ -9,6 +9,7 @@ import java.util.List;
+ import java.util.PriorityQueue;
+ import java.util.concurrent.Callable;
+ import java.util.concurrent.ConcurrentHashMap;
++import java.util.concurrent.ConcurrentLinkedQueue;
+ import java.util.concurrent.Executor;
+ import java.util.concurrent.Executors;
+ import java.util.concurrent.Future;
+@@ -97,6 +98,9 @@ public class CraftScheduler implements BukkitScheduler {
+      * The sync task that is currently running on the main thread.
+      */
+     private volatile CraftTask currentTask = null;
++    // Leaf start - SparklyPaper - parallel world ticking - rescue sync tasks scheduled from a Level Tick Thread to avoid deadlocks
++    private final ConcurrentLinkedQueue<CraftFuture<?>> syncRescueTasks = new ConcurrentLinkedQueue<>();
++    // Leaf end - SparklyPaper - parallel world ticking
+     // Paper start - Improved Async Task Scheduler
+     volatile int currentTick = -1;/*
+     private final Executor executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("Craft Scheduler Thread - %d").build());
+@@ -256,6 +260,11 @@ public class CraftScheduler implements BukkitScheduler {
+         CraftScheduler.validate(plugin, task);
+         final CraftFuture<T> future = new CraftFuture<T>(task, plugin, this.nextId());
+         this.handle(future, 0L);
++        // Leaf start - SparklyPaper - parallel world ticking - rescue sync tasks scheduled from a Level Tick Thread to avoid deadlocks
++        if (ca.spottedleaf.moonrise.common.util.TickThread.isServerLevelTickThread()) {
++            this.syncRescueTasks.add(future);
++        }
++        // Leaf end - SparklyPaper - parallel world ticking
+         return future;
+     }
+ 
+@@ -508,6 +517,17 @@ public class CraftScheduler implements BukkitScheduler {
+         //this.debugHead = this.debugHead.getNextHead(this.currentTick); // Paper
+     }
+ 
++    // Leaf start - SparklyPaper - parallel world ticking - run sync tasks rescued from Level Tick Threads
++    public void drainSyncRescueTasks() {
++        CraftFuture<?> future;
++        while ((future = this.syncRescueTasks.poll()) != null) {
++            if (future.getPeriod() == CraftTask.NO_REPEATING) {
++                future.run();
++            }
++        }
 +    }
++    // Leaf end - SparklyPaper - parallel world ticking
 +
-+    public void executeReadyTasks() { // Leaf - SparklyPaper - parallel world ticking - drain ready sync tasks without advancing the tick
-         final List<CraftTask> temp = this.temp;
-         this.parsePending();
-         while (this.isReady(this.currentTick)) {
+     protected void addTask(final CraftTask task) {
+         final CraftTask tailTask = this.tail.getAndSet(task);
+         tailTask.setNext(task);

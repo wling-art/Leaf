@@ -81,7 +81,7 @@ index 0d51d2ac814d000724e056be6f480766fd892993..a48c84b53aac1d79567a276165d0ff31
  
      // note: never call while inside the chunk system, this will absolutely break everything
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 6ca62edd696ea8b320a06ded4044f0e4e33fa068..a262c02277e24627a4b804c19ac9a1fc7216f1c4 100644
+index 59075996a64cb657db0762178002e02bd87bcab4..318accd66e9ba75a7b56724ee3deae96e1082b03 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
 @@ -1949,6 +1949,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -95,7 +95,7 @@ index 6ca62edd696ea8b320a06ded4044f0e4e33fa068..a262c02277e24627a4b804c19ac9a1fc
  
 @@ -1971,9 +1973,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              while (!tasks.isEmpty()) {
-                 // Leaf start - SparklyPaper - parallel world ticking - drain plugin sync tasks while waiting to avoid deadlocks (e.g. MythicMobs callSyncAndJoin); not MinecraftServer#pollTask, which runs chunk-system tasks for concurrently ticking worlds
+                 // Leaf start - SparklyPaper - parallel world ticking - rescue sync tasks scheduled from a Level Tick Thread while waiting to avoid deadlocks (e.g. MythicMobs callSyncAndJoin)
                  final java.util.concurrent.Future<ServerLevel> next = tasks.peek();
 +                ServerLevel serverLevel;
                  while (true) {
@@ -104,8 +104,8 @@ index 6ca62edd696ea8b320a06ded4044f0e4e33fa068..a262c02277e24627a4b804c19ac9a1fc
 +                        serverLevel = next.get(1L, java.util.concurrent.TimeUnit.MILLISECONDS);
                          break;
                      } catch (java.util.concurrent.TimeoutException ignored) {
-                         super.pollTask();
-@@ -1982,6 +1985,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+                         this.server.getScheduler().drainSyncRescueTasks();
+@@ -1981,6 +1984,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
                  }
                  tasks.pop();
                  // Leaf end - SparklyPaper - parallel world ticking

@@ -112,7 +112,7 @@ index ff32a89a720676c5a9f34ea7c859f03d47545b72..76ec194d213a1f3f8b7afd6565d8c63a
                      List<org.bukkit.block.BlockState> states = new java.util.ArrayList<>(level.capturedBlockStates.values());
                      level.capturedBlockStates.clear();
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 055d0d330aba403cd57b94536d8da0455f4b5886..f3258d02155604eddd9bc22d3117929eb9974db3 100644
+index 055d0d330aba403cd57b94536d8da0455f4b5886..c7e7a633f7b5d4d465200c47f21fffc1fd776a4a 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
 @@ -311,6 +311,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -204,7 +204,7 @@ index 055d0d330aba403cd57b94536d8da0455f4b5886..f3258d02155604eddd9bc22d3117929e
      protected void tickChildren(BooleanSupplier hasTimeLeft) {
          ProfilerFiller profilerFiller = Profiler.get();
          this.getPlayerList().getPlayers().forEach(serverPlayer1 -> serverPlayer1.connection.suspendFlushing());
-@@ -1885,35 +1915,68 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1885,35 +1915,67 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          }
  
          this.isIteratingOverLevels = true; // Paper - Throw exception on world create while being ticked
@@ -276,15 +276,14 @@ index 055d0d330aba403cd57b94536d8da0455f4b5886..f3258d02155604eddd9bc22d3117929e
 -            profilerFiller.pop();
 -            serverLevel.explosionDensityCache.clear(); // Paper - Optimize explosions
 +            while (!tasks.isEmpty()) {
-+                // Leaf start - SparklyPaper - parallel world ticking - drain plugin sync tasks while waiting to avoid deadlocks (e.g. MythicMobs callSyncAndJoin); not MinecraftServer#pollTask, which runs chunk-system tasks for concurrently ticking worlds
++                // Leaf start - SparklyPaper - parallel world ticking - rescue sync tasks scheduled from a Level Tick Thread while waiting to avoid deadlocks (e.g. MythicMobs callSyncAndJoin)
 +                final java.util.concurrent.Future<ServerLevel> next = tasks.peek();
 +                while (true) {
 +                    try {
 +                        next.get(1L, java.util.concurrent.TimeUnit.MILLISECONDS);
 +                        break;
 +                    } catch (java.util.concurrent.TimeoutException ignored) {
-+                        super.pollTask();
-+                        this.server.getScheduler().executeReadyTasks();
++                        this.server.getScheduler().drainSyncRescueTasks();
 +                    }
 +                }
 +                tasks.pop();
@@ -297,7 +296,7 @@ index 055d0d330aba403cd57b94536d8da0455f4b5886..f3258d02155604eddd9bc22d3117929e
          this.isIteratingOverLevels = false; // Paper - Throw exception on world create while being ticked
  
          profilerFiller.popPush("connection");
-@@ -2013,6 +2076,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -2013,6 +2075,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          Map<ResourceKey<Level>, ServerLevel> oldLevels = this.levels;
          Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
          newLevels.remove(level.dimension());

@@ -20,10 +20,10 @@ connection logic checks.
 This performance issue is most noticeable with many players on the same level.
 
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 9e593877b5c70dae97e95b28f33da2e36f3eff20..600fec603bd80720d24a4d1ef07ff1626fef5ae3 100644
+index d4811fce311bab82ebb616e6b6c8bed242e98f10..def091de8ee81b4d7382fabec8cea75dd549c0a3 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -3068,6 +3068,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -3067,6 +3067,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          } else if (rule == GameRules.LOCATOR_BAR) {
              // this.getAllLevels().forEach(serverLevel -> { // Paper - per-world game rules
                  ServerWaypointManager waypointManager = serverLevel.getWaypointManager();
