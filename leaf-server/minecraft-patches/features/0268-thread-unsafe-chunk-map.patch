@@ -81,7 +81,7 @@ index 0d51d2ac814d000724e056be6f480766fd892993..a48c84b53aac1d79567a276165d0ff31
  
      // note: never call while inside the chunk system, this will absolutely break everything
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 59075996a64cb657db0762178002e02bd87bcab4..318accd66e9ba75a7b56724ee3deae96e1082b03 100644
+index eab55492d4132731f99af4f3b0266c11e639baee..2501f67f791a9e5fd63c88790437cd2c2712346c 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
 @@ -1949,6 +1949,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -93,22 +93,12 @@ index 59075996a64cb657db0762178002e02bd87bcab4..318accd66e9ba75a7b56724ee3deae96
                              ca.spottedleaf.moonrise.common.util.TickThread.ServerLevelTickThread currentThread = (ca.spottedleaf.moonrise.common.util.TickThread.ServerLevelTickThread) Thread.currentThread();
                              currentThread.currentTickingServerLevel = serverLevel;
  
-@@ -1971,9 +1973,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1969,7 +1971,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+             }
+ 
              while (!tasks.isEmpty()) {
-                 // Leaf start - SparklyPaper - parallel world ticking - rescue sync tasks scheduled from a Level Tick Thread while waiting to avoid deadlocks (e.g. MythicMobs callSyncAndJoin)
-                 final java.util.concurrent.Future<ServerLevel> next = tasks.peek();
-+                ServerLevel serverLevel;
-                 while (true) {
-                     try {
--                        next.get(1L, java.util.concurrent.TimeUnit.MILLISECONDS);
-+                        serverLevel = next.get(1L, java.util.concurrent.TimeUnit.MILLISECONDS);
-                         break;
-                     } catch (java.util.concurrent.TimeoutException ignored) {
-                         this.server.getScheduler().drainSyncRescueTasks();
-@@ -1981,6 +1984,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
-                 }
-                 tasks.pop();
-                 // Leaf end - SparklyPaper - parallel world ticking
+-                tasks.poll().get();
++                final ServerLevel serverLevel = tasks.poll().get();
 +                serverLevel.getChunkSource().fullChunksNonSync.setThread(); // Leaf - thread unsafe chunk map
 +                serverLevel.moonrise$getChunkTaskScheduler().chunkHolderManager.chunkHoldersNoSync.setThread(); // Leaf - thread unsafe chunk map
              }
