@@ -12,7 +12,7 @@ Co-authored-by: MrlingXD <90316914+wling-art@users.noreply.github.com>
 Commit: a274e6617255a93d567efdf00762e492aa2df535
 
 diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
-index 617d428102d65f129689dfcbca1c00b97e14a2a0..7efd2967f0e8285c861c436a9b7331eb080be226 100644
+index 617d428102d65f129689dfcbca1c00b97e14a2a0..f5935b07b36cd2e8f6ad51cb567ce27e03bac001 100644
 --- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
 +++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
 @@ -1129,7 +1129,7 @@ public final class ChunkHolderManager {
@@ -39,7 +39,16 @@ index 617d428102d65f129689dfcbca1c00b97e14a2a0..7efd2967f0e8285c861c436a9b7331eb
  
          if (BLOCK_TICKET_UPDATES.get() == Boolean.TRUE) {
              throw new IllegalStateException("Cannot unload chunks recursively");
-@@ -1419,7 +1425,7 @@ public final class ChunkHolderManager {
+@@ -1405,6 +1411,8 @@ public final class ChunkHolderManager {
+         return Boolean.FALSE;
+     });
+ 
++    public boolean areTicketUpdatesBlocked() { return BLOCK_TICKET_UPDATES.get() == Boolean.TRUE; } // Leaf - SparklyPaper - parallel world ticking
++
+     public Boolean blockTicketUpdates() {
+         final Boolean ret = BLOCK_TICKET_UPDATES.get();
+         BLOCK_TICKET_UPDATES.set(Boolean.TRUE);
+@@ -1419,7 +1427,7 @@ public final class ChunkHolderManager {
          if (BLOCK_TICKET_UPDATES.get() == Boolean.TRUE) {
              throw new IllegalStateException("Cannot update ticket level while unloading chunks or updating entity manager");
          }
@@ -112,7 +121,7 @@ index 56b9f9016a652a704d785de683738efcf02a44f9..e2da19ca92028012397ec57ccc26c60f
                      List<org.bukkit.block.BlockState> states = new java.util.ArrayList<>(level.capturedBlockStates.values());
                      level.capturedBlockStates.clear();
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index b58876b837ce8a264242a67cfe268e83b5eaa776..42d9739f143fac797dc8dfc964dc81d94c2fa969 100644
+index b58876b837ce8a264242a67cfe268e83b5eaa776..0c34c2914b043069c7ace2c114ba88a97ebcb749 100644
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
 @@ -341,6 +341,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
