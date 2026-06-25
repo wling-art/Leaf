@@ -36,6 +36,12 @@ public class ChunkSectionItemEntityMovementTracker extends ChunkSectionEntityMov
         return level.getEntitiesOfClass((Class) ItemEntity.class, boundingBox, EntitySelector.ENTITY_STILL_ALIVE);
     }
 
+    public static void notifySectionChanged(@NotNull Level level, long sectionKey) {
+        ChunkSectionItemEntityMovementTracker tracker = itemEntityMovementTrackerMap.get(
+            new ChunkSectionIdentifier(sectionKey, level.getMinecraftWorld().uuid));
+        if (tracker != null) tracker.notifyAllListeners(level.getGameTime());
+    }
+
     public static @NotNull List<ChunkSectionItemEntityMovementTracker> registerAt(ServerLevel world, AABB interactionArea) {
         WorldSectionBox worldSectionBox = WorldSectionBox.entityAccessBox(world, interactionArea);
         UUID levelId = world.uuid;

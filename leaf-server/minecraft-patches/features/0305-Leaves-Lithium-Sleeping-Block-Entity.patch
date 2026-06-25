@@ -28,6 +28,30 @@ By: 2No2Name <2No2Name@web.de>
 As part of: Lithium (https://github.com/CaffeineMC/lithium)
 Licensed under: LGPL-3.0-only (https://www.gnu.org/licenses/lgpl-3.0.html)
 
+Co-authored-by: MrlingXD <90316914+wling-art@users.noreply.github.com>
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/level/entity/EntityLookup.java b/ca/spottedleaf/moonrise/patches/chunk_system/level/entity/EntityLookup.java
+index ac0aa678fd301de0cf32e038faff33cb96817aa0..d783d8edd9ec0a222d640266cba93b277423ca30 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/level/entity/EntityLookup.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/level/entity/EntityLookup.java
+@@ -479,6 +479,17 @@ public abstract class EntityLookup implements LevelEntityGetter<Entity> {
+ 
+         this.entityStatusChange(entity, slices, Visibility.HIDDEN, getEntityStatus(entity), false, !fromDisk, false);
+ 
++        // Leaf start - Lithium Sleeping Block Entity - notify movement trackers on entity add
++        if (org.dreeam.leaf.config.modules.opt.SleepingBlockEntity.enabled) {
++            final long trackerSectionKey = ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkSectionKey(sectionX, sectionY, sectionZ);
++            if (entity instanceof net.minecraft.world.entity.item.ItemEntity) {
++                net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionItemEntityMovementTracker.notifySectionChanged(this.world, trackerSectionKey);
++            } else if (entity instanceof net.minecraft.world.entity.vehicle.ContainerEntity) {
++                net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionInventoryEntityTracker.notifySectionChanged(this.world, trackerSectionKey);
++            }
++        }
++        // Leaf end - Lithium Sleeping Block Entity - notify movement trackers on entity add
++
+         return true;
+     }
+ 
 diff --git a/net/minecraft/core/NonNullList.java b/net/minecraft/core/NonNullList.java
 index 8fd27a342f7302284c48b3db7d085bb692e08cdc..8992e13df499333235e1a51b725c0ad3ccd0284d 100644
 --- a/net/minecraft/core/NonNullList.java
@@ -79,7 +103,7 @@ index 6e08d50794c4af4405f3e164a3fd46f376b3f78f..942c985ff067f163b4d4434625e71c90
  
      int getContainerSize();
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index 1173bd0a7fe83ce33bcb13b5efe34837b249e693..a7a4a6fe27614c2e50eb3160d263e3f67d6f5ea3 100644
+index df75dfc3ee7c45181c02ce4fc01aa614293f6480..670bc093bf7a9a1b4acc33cbcec7227a21afd636 100644
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
 @@ -328,7 +328,7 @@ public abstract class Entity
@@ -91,21 +115,17 @@ index 1173bd0a7fe83ce33bcb13b5efe34837b249e693..a7a4a6fe27614c2e50eb3160d263e3f6
      private final VecDeltaCodec packetPositionCodec = new VecDeltaCodec();
      public boolean needsSync;
      public boolean syncPosition;
-@@ -5299,6 +5299,19 @@ public abstract class Entity
+@@ -5299,6 +5299,15 @@ public abstract class Entity
              this.setBoundingBox(this.makeBoundingBox());
          }
          // Paper end - Block invalid positions and bounding box
 +        // Leaves start - Lithium Sleeping Block Entity
 +        if (!org.dreeam.leaf.config.modules.opt.SleepingBlockEntity.enabled) return;
 +        if (this instanceof ItemEntity) {
-+            long sectionKey = ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkSectionKey(this);
-+            net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionItemEntityMovementTracker tracker = net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionItemEntityMovementTracker.itemEntityMovementTrackerMap.get(new net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionEntityMovementTracker.ChunkSectionIdentifier(sectionKey, level.getMinecraftWorld().uuid));
-+            if (tracker != null) tracker.notifyAllListeners(level.getGameTime());
++            net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionItemEntityMovementTracker.notifySectionChanged(level, ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkSectionKey(this));
 +        }
 +        else if (this instanceof net.minecraft.world.entity.vehicle.ContainerEntity) {
-+            long sectionKey = ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkSectionKey(this);
-+            net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionInventoryEntityTracker tracker = net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionInventoryEntityTracker.containerEntityMovementTrackerMap.get(new net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionEntityMovementTracker.ChunkSectionIdentifier(sectionKey, level.getMinecraftWorld().uuid));
-+            if (tracker != null) tracker.notifyAllListeners(level.getGameTime());
++            net.caffeinemc.mods.lithium.common.tracking.entity.ChunkSectionInventoryEntityTracker.notifySectionChanged(level, ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkSectionKey(this));
 +        }
 +        // Leaves end - Lithium Sleeping Block Entity
      }
@@ -281,7 +301,7 @@ index f267cf14bb602b4b6c4c009ce5999f95b8ed7be4..4b8ba29b8a1ea150eadf510b3e0590f9
      }
  
 diff --git a/net/minecraft/world/level/Level.java b/net/minecraft/world/level/Level.java
-index 45e0e8a3d5fefac3b470fed670e9412082456437..4adf98c7afc0a904ad78fba877bfa265cde68114 100644
+index 6d6fb0bf986428d61d7ceb9f02eb63b668a7f705..776f0dcce2c08d5682fe18595cba964d84ccedd3 100644
 --- a/net/minecraft/world/level/Level.java
 +++ b/net/minecraft/world/level/Level.java
 @@ -2309,4 +2309,25 @@ public abstract class Level implements LevelAccessor, AutoCloseable, ca.spottedl
@@ -2123,7 +2143,7 @@ index fef616d7b92454a721f7a14941b62a8963080cc5..5209ee3d7477502365c787c9633abe45
 +    // Leaves end - Lithium Sleeping Block Entity
  }
 diff --git a/net/minecraft/world/level/block/entity/ShulkerBoxBlockEntity.java b/net/minecraft/world/level/block/entity/ShulkerBoxBlockEntity.java
-index 174e39fb109bef3dd27ebc14aa13f6faabb10547..2d693f7b1630abe4b7101a92cc58d281fafb7ffa 100644
+index d1a2e671509b51f0bfad1633b1cdc2be671fca81..4ed9f9530ea0836800b19f70e262f301f295158b 100644
 --- a/net/minecraft/world/level/block/entity/ShulkerBoxBlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/ShulkerBoxBlockEntity.java
 @@ -32,7 +32,7 @@ import net.minecraft.world.phys.AABB;
@@ -2221,7 +2241,7 @@ index ed26c0eb4e1acbb28987a72ec0c541b2fb681c54..1929fa0034ab1e97e8b154301d354f70
      }
  
 diff --git a/net/minecraft/world/level/chunk/LevelChunk.java b/net/minecraft/world/level/chunk/LevelChunk.java
-index 991013b687328ffe62a89326e628a4854674fc0a..d71babaf3df8a620d71a686b365e41283615a494 100644
+index 7bc485a7b86dc6195588d29f7688f61db93ebaac..83bd58a65b1b27ebddfeaf2477e00dbf6268246f 100644
 --- a/net/minecraft/world/level/chunk/LevelChunk.java
 +++ b/net/minecraft/world/level/chunk/LevelChunk.java
 @@ -989,10 +989,12 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
