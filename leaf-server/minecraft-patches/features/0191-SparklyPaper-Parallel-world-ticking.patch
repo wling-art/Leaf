@@ -335,6 +335,44 @@ index aa00d3e22fa4c941c124770c50b298301aaadd14..5a8937740f7779f971c2a13ec580eed7
              if (!progress.isEmpty() || !added.isEmpty() || !removed.isEmpty()) {
                  player.connection.send(new ClientboundUpdateAdvancementsPacket(this.isFirstPacket, added, removed, progress, showAdvancements));
              }
+diff --git a/net/minecraft/server/commands/SummonCommand.java b/net/minecraft/server/commands/SummonCommand.java
+index c318f1f0a57d315786a02265d45605a69c675151..8df98fae6bbce4bfeaf8938c2e14c9223becbc90 100644
+--- a/net/minecraft/server/commands/SummonCommand.java
++++ b/net/minecraft/server/commands/SummonCommand.java
+@@ -98,11 +98,30 @@ public class SummonCommand {
+             throw ERROR_FAILED.create();
+         }
+ 
+-        if (finalize && entity instanceof Mob mob) {
+-            mob.finalizeSpawn(source.getLevel(), source.getLevel().getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.COMMAND, null);
++        // Leaf start - SparklyPaper - parallel world ticking
++        java.util.function.Supplier<Boolean> addEntity = () -> {
++            if (finalize && entity instanceof Mob mob) {
++                mob.finalizeSpawn(source.getLevel(), source.getLevel().getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.COMMAND, null);
++            }
++
++            return level.tryAddFreshEntityWithPassengers(entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND); // CraftBukkit - pass a spawn reason of "COMMAND"
++        };
++        boolean added;
++        if (org.dreeam.leaf.config.modules.async.SparklyPaperParallelWorldTicking.enabled && !ca.spottedleaf.moonrise.common.util.TickThread.isTickThreadFor(level)) {
++            try {
++                added = level.tickExecutor.submit(addEntity::get).get(5, java.util.concurrent.TimeUnit.SECONDS);
++            } catch (final java.util.concurrent.TimeoutException e) {
++                net.minecraft.server.MinecraftServer.LOGGER.error("Timed out waiting for level {} to add summoned entity {}", level, entity, e);
++                added = false;
++            } catch (final java.util.concurrent.ExecutionException | InterruptedException e) {
++                throw new RuntimeException(e);
++            }
++        } else {
++            added = addEntity.get();
+         }
++        // Leaf end - SparklyPaper - parallel world ticking
+ 
+-        if (!level.tryAddFreshEntityWithPassengers(entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND)) { // CraftBukkit - pass a spawn reason of "COMMAND"
++        if (!added) {
+             throw ERROR_DUPLICATE_UUID.create();
+         } else {
+             return entity;
 diff --git a/net/minecraft/server/dedicated/DedicatedServer.java b/net/minecraft/server/dedicated/DedicatedServer.java
 index d69c08d277084b6ab3a74038156fb2490d46388d..6f87cf1dde2506e9b9e668940dc6c8af9b3a574e 100644
 --- a/net/minecraft/server/dedicated/DedicatedServer.java
